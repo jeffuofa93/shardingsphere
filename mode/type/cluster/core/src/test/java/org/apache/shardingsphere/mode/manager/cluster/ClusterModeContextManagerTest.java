@@ -1,6 +1,7 @@
 package org.apache.shardingsphere.mode.manager.cluster;
 
 import lombok.SneakyThrows;
+import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.instance.InstanceContext;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.decorator.model.ShardingSphereSchema;
@@ -17,6 +18,7 @@ import org.apache.shardingsphere.mode.metadata.persist.service.DatabaseMetaDataP
 import org.apache.shardingsphere.mode.persist.PersistRepository;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -85,14 +87,35 @@ public class ClusterModeContextManagerTest {
     public void assertAlterSchema() {
         ClusterModeContextManager clusterModeContextManager = new ClusterModeContextManager();
         clusterModeContextManager.setContextManagerAware(contextManager);
-        clusterModeContextManager.createDatabase("foo_db");
-        clusterModeContextManager.createSchema("foo_db", "foo_schema");
-
+        ShardingSphereMetaData shardingSphereMetaData = contextManager.getMetaDataContexts().getMetaData();
+        DatabaseType databaseType = mock(DatabaseType.class);
+        shardingSphereMetaData.addDatabase("foo_db",databaseType);
+        ShardingSphereSchema shardingSphereSchema = mock(ShardingSphereSchema.class);
+        shardingSphereMetaData.getDatabase("foo_db").putSchema("foo_schema",shardingSphereSchema);
         AlterSchemaPOJO alterSchemaPOJO = new AlterSchemaPOJO("foo_db","foo","foo_schema","bar_schema");
+
         clusterModeContextManager.alterSchema(alterSchemaPOJO);
         verify(repository).persist(eq("/metadata/foo_db/schemas/bar_schema/tables"), anyString());
-
+        verify(repository).delete(eq("/metadata/foo_db/schemas/foo_schema"));
     }
+
+    @Test
+    public void assertAlterSchemaMetaData() {
+        ClusterModeContextManager clusterModeContextManager = new ClusterModeContextManager();
+        clusterModeContextManager.setContextManagerAware(contextManager);
+        ShardingSphereMetaData shardingSphereMetaData = contextManager.getMetaDataContexts().getMetaData();
+        DatabaseType databaseType = mock(DatabaseType.class);
+        shardingSphereMetaData.addDatabase("foo_db",databaseType);
+        ShardingSphereSchema shardingSphereSchema = mock(ShardingSphereSchema.class);
+        shardingSphereMetaData.getDatabase("foo_db").putSchema("foo_schema",shardingSphereSchema);
+        AlterSchemaPOJO alterSchemaPOJO = new AlterSchemaPOJO("foo_db","foo","foo_schema","bar_schema");
+
+        clusterModeContextManager.alterSchema(alterSchemaPOJO);
+        verify(repository).persist(eq("/metadata/foo_db/schemas/bar_schema/tables"), anyString());
+        verify(repository).delete(eq("/metadata/foo_db/schemas/foo_schema"));
+    }
+
+
 
 //    @Test
 //    public void assertPersistSchemaMetaData() {
